@@ -1,6 +1,6 @@
 import { Router } from "express";
 import upload from "../middleware/multer.js";
-import { addAlbum, addSong, getAlbumDetails, getAlbumSongList, getSongDetails, updateAlbum, updateSong } from "../controller/songController.js";
+import { addAlbum, addSong, deleteAlbum, deleteSong, getAlbumDetails, getAlbumSongList, getCounts, getSongDetails, updateAlbum, updateSong } from "../controller/songController.js";
 import { createPlaylist, getSongs } from "../controller/playListController.js";
 import { authenticateToken } from "../middleware/jwtverify.js";
 
@@ -22,6 +22,12 @@ router.post("/songs", authenticateToken, getSongs);
 router.get('/albumDetails/:albumId', getAlbumDetails)
 
 router.get('/songDetails/:songId', getSongDetails)
+
+router.delete("/deleteSong/:id", deleteSong);
+
+router.delete("/deleteAlbum/:id",  deleteAlbum);
+
+router.get("/dashboard/Count",  getCounts);
 
 
 

@@ -1,10 +1,11 @@
 import { v2 as cloudinary } from "cloudinary";
 import { Song } from "../model/song.js";
 import { Album } from "../model/album.js";
+import { User } from "../model/user.js";
 
 export const addSong = async (req, res) => {
   try {
-    const { songName, description, singerName, album } = req.body;
+    const { songName, description, singerName, album,duration } = req.body;
 
     // Check if files exist
     if (!req.files || !req.files.audio || !req.files.image) {
@@ -32,6 +33,7 @@ export const addSong = async (req, res) => {
       album,
       audio: audioUpload.secure_url,
       image: imgUpload.secure_url,
+      duration
     });
 
     await newSong.save();
@@ -147,7 +149,7 @@ export const updateAlbum = async (req, res) => {
 
 export const addAlbum = async (req, res) => {
   try {
-    const { albumName, albumDescription } = req.body;
+    const { albumName, albumDescription, albumColor, songIds } = req.body;
 
     // Check if the image file exists
     if (!req.files || !req.files.image) {
@@ -161,11 +163,19 @@ export const addAlbum = async (req, res) => {
       resource_type: "image",
     });
 
+    // Parse the songIds if provided
+    let songArray = [];
+    if (songIds) {
+      songArray = songIds.split(',').map((id) => id.trim()); // Split and trim each ID
+    }
+
     // Create a new album document
     const newAlbum = new Album({
       albumName,
       albumImg: imgUpload.secure_url,
       albumDescription,
+      albumColor,
+      songs: songArray, // Add the songs to the array
     });
 
     await newAlbum.save();
@@ -249,5 +259,78 @@ export const getSongDetails = async (req, res) => {
   } catch (error) {
     console.error("Error fetching song details:", error);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+
+
+export const deleteSong = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the song to get the album reference
+    const song = await Song.findById(id);
+
+    if (!song) {
+      return res.status(404).json({ message: "Song not found." });
+    }
+
+    // Check if the song is present in any album's songs array and remove it
+    await Album.updateMany(
+      { songs: id },
+      { $pull: { songs: id } }
+    );
+
+    // Delete the song
+    await Song.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Song deleted successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+// Controller to delete an album
+export const deleteAlbum = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Find the album to get the songs array
+    const album = await Album.findById(id);
+
+    if (!album) {
+      return res.status(404).json({ message: "Album not found." });
+    }
+
+  
+
+    // Delete the album
+    await Album.findByIdAndDelete(id);
+
+    res.status(200).json({ message: "Album and its songs deleted successfully." });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+
+export const getCounts = async (req, res) => {
+  try {
+    const totalSongs = await Song.countDocuments();
+    const totalAlbums = await Album.countDocuments();
+    const totalUser = await User.countDocuments();
+    const totalSingers = await Song.distinct("singerName").then(singers => singers.length);
+
+    res.status(200).json({
+      totalSongs,
+      totalAlbums,
+      totalSingers,
+      totalUser
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error." });
   }
 };
