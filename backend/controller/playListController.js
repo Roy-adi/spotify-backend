@@ -283,3 +283,62 @@ export const getSongs = async (req, res) => {
   }
 };
 
+
+
+
+export const editPlaylist = async (req, res) => {
+  try {
+    const { playlistId } = req.params;
+    const { playlistName, removeCollaborators } = req.body;
+
+    console.log(req.body, 'body');
+
+    // Find the playlist by ID
+    const playlist = await Playlist.findById(playlistId);
+
+    if (!playlist) {
+      return res.status(404).json({ message: 'Playlist not found' });
+    }
+
+    // Check if the requester is the owner of the playlist
+    // if (String(playlist.owner) !== String(req.user._id)) {
+    //   return res.status(403).json({ message: 'You are not authorized to edit this playlist' });
+    // }
+
+    // Update playlist name if provided
+    if (playlistName) {
+      playlist.playlistName = playlistName;
+    }
+
+    // Update playlist image if provided
+    if (req.files && req.files.image) {
+      try {
+        const imageFile = req.files.image[0]; // Ensure this indexing is valid
+        const imgUpload = await cloudinary.uploader.upload(imageFile.path, {
+          resource_type: 'image',
+        });
+        playlist.playlistImg = imgUpload.secure_url;
+      } catch (uploadError) {
+        console.error(uploadError);
+        return res.status(500).json({ message: 'Image upload failed' });
+      }
+    }
+
+    // Remove collaborators if specified
+    if (Array.isArray(removeCollaborators) && removeCollaborators.length > 0) {
+      playlist.collaborators = playlist.collaborators.filter(
+        (collaborator) => !removeCollaborators.includes(String(collaborator))
+      );
+    }
+
+    // Save the updated playlist
+    await playlist.save();
+
+    res.status(200).json({ message: 'Playlist updated successfully', playlist });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'An error occurred while updating the playlist' });
+  }
+};
+
+
