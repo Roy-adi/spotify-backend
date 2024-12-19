@@ -4,26 +4,20 @@ import { addSongToPlaylist, createPlaylist, editPlaylist, getOwnerPlaylistDetail
 import { authenticateToken } from "../middleware/jwtverify.js";
 import { getAlbums } from "../controller/songController.js";
 import multer from "multer";
+import { getCollaborationRequestsList, respondToCollaborationRequest, sendCollaborationRequest } from "../controller/addCollaborater.js";
 
 const formDataReq = multer()
 
 const router = Router()
 
-
-router.post('/createPlaylist', authenticateToken, upload.fields([{ name: 'image', maxCount: 1 }]), createPlaylist);
-
-router.post('/addSongToPlaylist', authenticateToken,  addSongToPlaylist);
-
-router.post("/playlist/remove-song", authenticateToken, removeSongFromPlaylist);
-
-router.get('/playlists', authenticateToken, getPlaylistsByOwner);
-
 router.put('/editplaylists/:playlistId', upload.fields([{ name: 'image', maxCount: 1 }]), editPlaylist);
-
-router.get('/playlist/:playlistId', authenticateToken, getOwnerPlaylistDetails);
-
 
 router.get("/allAlbums",  getAlbums);
 
+router.post('/sendReqToCollaborator', authenticateToken,  sendCollaborationRequest);
+
+router.get('/Collaboration/list', authenticateToken,  getCollaborationRequestsList);
+
+router.post('/Collaboration/response', authenticateToken,  respondToCollaborationRequest);
 
 export default router;

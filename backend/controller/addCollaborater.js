@@ -4,29 +4,35 @@ import mongoose from "mongoose";
 import { User } from "../model/user.js";
 
 export const sendCollaborationRequest = async (req, res) => {
- try {
-   const { playlistId, collaboratorUsername } = req.body;
-   const ownerId = req.user._id;
+  try {
+    const { playlistId, collaboratorId } = req.body;
+    
+    // Check user authentication
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized: User not authenticated" });
+    }
+    
+    const ownerId = req.user._id;
 
-   const collaborator = await User.findOne({ username: collaboratorUsername });
+    const collaborator = await User.findById(collaboratorId);
 
-   if (!collaborator) {
-     return res.status(404).json({ message: "Collaborator not found" });
-   }
+    if (!collaborator) {
+      return res.status(404).json({ message: "Collaborator not found" });
+    }
 
-   const newRequest = new CollaborationRequest({
-     playlistId,
-     ownerId,
-     collaboratorId: collaborator._id,
-   });
+    const newRequest = new CollaborationRequest({
+      playlistId,
+      ownerId,
+      collaboratorId: collaborator._id,
+    });
 
-   await newRequest.save();
+    await newRequest.save();
 
-   res.status(200).json({ message: "Collaboration request sent", request: newRequest });
- } catch (error) {
-   console.error(error);
-   res.status(500).json({ message: "Server error, please try again later" });
- }
+    res.status(200).json({ message: "Collaboration request sent", request: newRequest });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error, please try again later" });
+  }
 };
 
 
@@ -36,6 +42,8 @@ export const respondToCollaborationRequest = async (req, res) => {
    const collaboratorId = req.user._id;
 
    const request = await CollaborationRequest.findById(requestId);
+
+   console.log(requestId, collaboratorId , ' match');
 
    if (!request || !request.collaboratorId.equals(collaboratorId)) {
      return res.status(404).json({ message: "Request not found or unauthorized" });
@@ -75,7 +83,7 @@ export const getCollaborationRequestsList = async (req, res) => {
    const userId = new mongoose.Types.ObjectId(req.user._id);
 
 
-   const requests = await CollaborationRequest.aggregate([
+   const requestsList = await CollaborationRequest.aggregate([
      {
        $match: { collaboratorId: userId }
      },
@@ -112,7 +120,7 @@ export const getCollaborationRequestsList = async (req, res) => {
      }
    ]);
 
-   res.status(200).json({ requests });
+   res.status(200).json({ requestsList });
  } catch (error) {
    console.error(error);
    res.status(500).json({ message: "Server error, please try again later" });

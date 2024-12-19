@@ -24,9 +24,11 @@ connectCloudinary()
 import songRoutes from './routes/song.js'
 import authRoute from './routes/auth.route.js'
 import playlist from './routes/playList.route.js'
+import collaborate from './routes/Collaborate.route.js'
 app.use('/api/v1/' , songRoutes)
 app.use('/api/v1/' , authRoute)
 app.use('/api/v1/' , playlist)
+app.use('/api/v1/' , collaborate)
 
 app.listen(PORT , ()=>{
   ConnectDb();

@@ -160,9 +160,9 @@ export const userDetails = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     const { keyword } = req.body;
-
+    const userId = req.user._id;
     // Construct the search filter
-    const filter = {};
+    const filter = { _id: { $ne: userId } };
     if (keyword) {
       filter.$or = [
         { name: { $regex: keyword, $options: "i" } }, // Case-insensitive regex for name

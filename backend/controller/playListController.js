@@ -110,6 +110,8 @@ export const removeSongFromPlaylist = async (req, res) => {
 
 
 
+
+
 export const getPlaylistsByOwner = async (req, res) => {
   try {
     const ownerId = req.user._id; // Assuming `req.user` is populated by authentication middleware
@@ -119,6 +121,67 @@ export const getPlaylistsByOwner = async (req, res) => {
       .populate("songs", "title duration") // Populate songs if needed
       .populate("collaborators", "name email") // Populate collaborators if needed
       .exec();
+
+    res.status(200).json({ message: "Playlists fetched successfully", playlists });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error, please try again later" });
+  }
+};
+
+
+export const getPlaylistsByOwnerOrCollaborator = async (req, res) => {
+  try {
+    const ownerId = req.user._id; // Current user ID
+
+    const playlists = await Playlist.aggregate([
+      {
+        $lookup: {
+          from: "collaborationrequests", // Collection name for collaborationRequestSchema
+          localField: "_id",
+          foreignField: "playlistId",
+          as: "collaborationRequests",
+        },
+      },
+      {
+        $match: {
+          $or: [
+            { owner: mongoose.Types.ObjectId(ownerId) }, // Owned playlists
+            {
+              $and: [
+                { "collaborationRequests.collaboratorId": mongoose.Types.ObjectId(ownerId) },
+                { "collaborationRequests.status": "accepted" },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "songs", // Collection name for songs
+          localField: "songs",
+          foreignField: "_id",
+          as: "songDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "users", // Collection name for users
+          localField: "collaborators",
+          foreignField: "_id",
+          as: "collaboratorDetails",
+        },
+      },
+      {
+        $project: {
+          playlistName: 1,
+          playlistImg: 1,
+          songDetails: { title: 1, duration: 1 },
+          owner: 1,
+          collaboratorDetails: { name: 1, email: 1 },
+        },
+      },
+    ]);
 
     res.status(200).json({ message: "Playlists fetched successfully", playlists });
   } catch (error) {
@@ -291,7 +354,7 @@ export const editPlaylist = async (req, res) => {
     const { playlistId } = req.params;
     const { playlistName, removeCollaborators } = req.body;
 
-    console.log(req.body, 'body');
+   
 
     // Find the playlist by ID
     const playlist = await Playlist.findById(playlistId);
