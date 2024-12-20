@@ -1,6 +1,6 @@
 import { Router } from "express";
 import upload from "../middleware/multer.js";
-import { addSongToPlaylist, createPlaylist, editPlaylist, getOwnerPlaylistDetails, getPlaylistsByOwner, removeSongFromPlaylist } from "../controller/playListController.js";
+import { addSongToPlaylist, createPlaylist, editPlaylist, getOwnerPlaylistDetails, getPlaylistsByOwner, getPlaylistsByOwnerOrCollaborator, removeSongFromPlaylist } from "../controller/playListController.js";
 import { authenticateToken } from "../middleware/jwtverify.js";
 import { getAlbums } from "../controller/songController.js";
 import multer from "multer";
@@ -16,7 +16,7 @@ router.post('/addSongToPlaylist', authenticateToken,  addSongToPlaylist);
 
 router.post("/playlist/remove-song", authenticateToken, removeSongFromPlaylist);
 
-router.get('/playlists', authenticateToken, getPlaylistsByOwner);
+router.get('/playlists', authenticateToken, getPlaylistsByOwnerOrCollaborator);
 
 router.put('/editplaylists/:playlistId', upload.fields([{ name: 'image', maxCount: 1 }]), editPlaylist);
 

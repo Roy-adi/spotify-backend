@@ -130,65 +130,106 @@ export const getPlaylistsByOwner = async (req, res) => {
 };
 
 
+
+
 export const getPlaylistsByOwnerOrCollaborator = async (req, res) => {
   try {
     const ownerId = req.user._id; // Current user ID
+    const owner_id = new mongoose.Types.ObjectId(ownerId);
 
-    const playlists = await Playlist.aggregate([
+    console.log("ownerId:", ownerId);
+
+    const result = await Playlist.aggregate([
       {
-        $lookup: {
-          from: "collaborationrequests", // Collection name for collaborationRequestSchema
-          localField: "_id",
-          foreignField: "playlistId",
-          as: "collaborationRequests",
-        },
-      },
-      {
-        $match: {
-          $or: [
-            { owner: mongoose.Types.ObjectId(ownerId) }, // Owned playlists
+        $facet: {
+          ownedPlaylists: [
             {
-              $and: [
-                { "collaborationRequests.collaboratorId": mongoose.Types.ObjectId(ownerId) },
-                { "collaborationRequests.status": "accepted" },
-              ],
+              $match: {
+                owner: owner_id, // Match playlists owned by the user
+              },
+            },
+            {
+              $project: {
+                playlistName: 1,
+                playlistImg: 1,
+                owner: 1,
+                createdAt:1 
+              },
+            },
+          ],
+          collaborationRequests: [
+            {
+              $lookup: {
+                from: "collaborationrequests",
+                let: { playlist_owner: owner_id },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          { $eq: ["$collaboratorId", "$$playlist_owner"] },
+                          { $eq: ["$status", "accepted"] },
+                        ],
+                      },
+                    },
+                  },
+                  {
+                    $lookup: {
+                      from: "playlists", // Join with playlists collection
+                      localField: "playlistId",
+                      foreignField: "_id",
+                      as: "playlistDetails",
+                    },
+                  },
+                  { $unwind: "$playlistDetails" },
+                  {
+                    $project: {
+                      _id: "$playlistDetails._id",
+                      playlistName: "$playlistDetails.playlistName",
+                      playlistImg: "$playlistDetails.playlistImg",
+                      ownerId: "$ownerId",
+                      collaboratorId: "$collaboratorId",
+                      status: "$status",
+                      createdAt: "$createdAt",
+                    },
+                  },
+                ],
+                as: "collaborationRequests",
+              },
+            },
+            { $unwind: "$collaborationRequests" },
+            {
+              $group: {
+                _id: "$collaborationRequests._id",
+                playlistName: { $first: "$collaborationRequests.playlistName" },
+                playlistImg: { $first: "$collaborationRequests.playlistImg" },
+                ownerId: { $first: "$collaborationRequests.ownerId" },
+                collaboratorId: { $first: "$collaborationRequests.collaboratorId" },
+                status: { $first: "$collaborationRequests.status" },
+                createdAt: { $first: "$collaborationRequests.createdAt" },
+              },
             },
           ],
         },
       },
-      {
-        $lookup: {
-          from: "songs", // Collection name for songs
-          localField: "songs",
-          foreignField: "_id",
-          as: "songDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "users", // Collection name for users
-          localField: "collaborators",
-          foreignField: "_id",
-          as: "collaboratorDetails",
-        },
-      },
-      {
-        $project: {
-          playlistName: 1,
-          playlistImg: 1,
-          songDetails: { title: 1, duration: 1 },
-          owner: 1,
-          collaboratorDetails: { name: 1, email: 1 },
-        },
-      },
     ]);
 
-    res.status(200).json({ message: "Playlists fetched successfully", playlists });
+    const { ownedPlaylists, collaborationRequests } = result[0];
+
+    res.status(200).json({
+      message: "Playlists fetched successfully",
+      playlistData:{
+        ownedPlaylists,
+        collaborationPlaylist  : collaborationRequests,
+      }
+       
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error, please try again later" });
   }
 };
+
 
 
 export const updatePlaylist = async (req, res) => {
