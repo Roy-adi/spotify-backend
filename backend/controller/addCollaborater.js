@@ -20,6 +20,16 @@ export const sendCollaborationRequest = async (req, res) => {
       return res.status(404).json({ message: "Collaborator not found" });
     }
 
+    const existingRequest = await CollaborationRequest.findOne({ 
+      playlistId, 
+      ownerId, 
+      collaboratorId 
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ message: "Collaboration request already sent to this user" });
+    }
+
     const newRequest = new CollaborationRequest({
       playlistId,
       ownerId,

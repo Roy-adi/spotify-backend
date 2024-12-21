@@ -1,6 +1,6 @@
 import { Router } from "express";
 import upload from "../middleware/multer.js";
-import { addSongToPlaylist, createPlaylist, editPlaylist, getOwnerPlaylistDetails, getPlaylistsByOwner, removeSongFromPlaylist } from "../controller/playListController.js";
+import {  editPlaylist, } from "../controller/playListController.js";
 import { authenticateToken } from "../middleware/jwtverify.js";
 import { getAlbums } from "../controller/songController.js";
 import multer from "multer";

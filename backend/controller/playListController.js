@@ -280,71 +280,31 @@ export const updatePlaylist = async (req, res) => {
 
 
 
-export const getOwnerPlaylistDetails = async (req, res) => {
+export const getPlaylistDetails = async (req, res) => {
   try {
-    const { playlistId } = req.params;
+    const { playlistId } = req.params; // Extract playlist ID from the request parameters
 
-    const ownerId = req.user._id; 
+    // Find the playlist by ID and populate the referenced fields
+    const playlist = await Playlist.findById(playlistId)
+      .populate({ path: 'songs', select: 'songName image audio duration singerName' }) // Populate the 'songs' field
+      .populate({ path: 'owner', select: 'name email' }) // Populate the 'owner' field
+      .populate({ path: 'collaborators', select: 'name email' }); // Populate the 'collaborators' field
 
-    // Find the playlist for the given owner
-    const playlistDetails = await Playlist.aggregate([
-      {
-        $match: {
-          _id: new mongoose.Types.ObjectId(playlistId),
-          owner: new mongoose.Types.ObjectId(ownerId),
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          as: "ownerDetails",
-        },
-      },
-      {
-        $unwind: '$ownerDetails',
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "collaborators",
-          foreignField: "_id",
-          as: "collaboratorDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "songs",
-          localField: "songs",
-          foreignField: "_id",
-          as: "songDetails",
-        },
-      },
-      {
-        $project: {
-          playlistName: 1,
-          playlistImg: 1,
-          ownerDetails: { _id: 1, name: 1, email: 1 },
-          collaboratorDetails: { _id: 1, name: 1, email: 1 },
-          songDetails: 1, // Include all fields of songDetails
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      },
-    ]);
-    
-
-    if (!playlistDetails || playlistDetails.length === 0) {
-      return res.status(404).json({ message: "Playlist not found for this owner" });
+    // Check if the playlist exists
+    if (!playlist) {
+      return res.status(404).json({ message: "Playlist not found" });
     }
 
-    res.status(200).json({ message: "Playlist details fetched successfully", playlist: playlistDetails[0] });
+    // Send the playlist details as a response
+    res.status(200).json(playlist);
   } catch (error) {
     console.error("Error fetching playlist details:", error);
-    res.status(500).json({ message: "Server error, please try again later" });
+    res.status(500).json({ message: "An error occurred while fetching the playlist details" });
   }
 };
+
+
+
 
 
 export const getSongs = async (req, res) => {

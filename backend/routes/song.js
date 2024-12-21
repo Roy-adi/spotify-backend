@@ -17,7 +17,7 @@ router.route('/editAlbum/:id').put(upload.fields([{name:'image', maxCount:1}]), 
 
 router.route('/getalbumSongList').post(getAlbumSongList)
 
-router.post("/songs", authenticateToken, getSongs);
+router.post("/songs", getSongs);
 
 router.get('/albumDetails/:albumId', getAlbumDetails)
 
